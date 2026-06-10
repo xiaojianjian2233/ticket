@@ -1,0 +1,209 @@
+
+
+
+4 KSM 工单完整参数
+
+  {
+    "source": "ksm",
+    "raw": {
+      "billId": "R20260101-0001",
+      "billNumber": "R20260101-0001",
+      "title": "工单标题",
+      "problem": "问题描述内容",
+      "status": 2,
+      "urgency": 5,
+      "feedbackType": 0,
+      "createDateTime": "2026-01-01 09:00:00",
+      "updateDateTime": "2026-01-02 10:00:00",
+      "feedbackUser": "反馈人姓名",
+      "feedbackPhone": "13800000000",
+      "feedbackTel": "0755-12345678",
+      "feedbackEmail": "user@example.com",
+      "product": {
+        "id": "prod_001",
+        "name": "星空旗舰版"
+      },
+      "version": {
+        "id": "ver_001",
+        "mainproductname": "V15.0"
+      },
+      "module": {
+        "id": "mod_001",
+        "name": "开票"
+      },
+      "node": {
+        "id": "node_001",
+        "name": "处理中"
+      },
+      "customerInfo": {
+        "customerName": "某某有限公司",
+        "customerNumber": "C20260001",
+        "serviceLevel": "标准服务",
+        "linkman": "联系人姓名",
+        "phone": "0755-12345678",
+        "mobile": "13800000000",
+        "email": "contact@example.com"
+      },
+      "assignUser": {
+        "realname": "张三",
+        "name": "zhangsan"
+      },
+      "sponser": {
+        "realname": "李四"
+      },
+      "handleSteps": [
+        {
+          "nodeName": "受理",
+          "nodeDefCode": "accept",
+          "nodeStatus": 1,
+          "handleDateTime": "2026-01-01 09:05:00",
+          "duringtime": 5,
+          "assignUser": { "realname": "张三", "name": "zhangsan" },
+          "dealopinion": "已受理，分配处理人",
+          "delayReason": "",
+          "releaseDate": "",
+          "patchVersion": "",
+          "patchNumber": "",
+          "opercacheId": "op_001"
+        }
+      ],
+      "evaluateInfo": {
+        "isSolved": "是",
+        "serveSatisfy": "满意",
+        "serveTimely": "及时",
+        "fservicequality": "优",
+        "advice": "无",
+        "isBack": "否"
+      },
+      "attachment": [
+        {
+          "name": "截图.png",
+          "url": "https://ksm.example.com/attach/xxx.png"
+        }
+      ]
+    },
+    "fields": {
+      "工单来源": "KSM",
+      "工单来源ID": "R20260101-0001",
+      "工单来源编号": "R20260101-0001",
+      "主题": "工单标题",
+      "问题描述": "问题描述内容",
+      "工单状态": "处理中",
+      "数据源工单状态": "处理中",
+      "紧急程度": "一般",
+      "流转类型": "应用问题",
+      "工单创建时间": 1735689600000,
+      "最新更新时间": 1735776000000,
+      "响应时间": 1735689900000,
+      "受理人": "张三",
+      "处理环节": "处理中",
+      "产品线": "星空旗舰版",
+      "主产品名称": "V15.0",
+      "产品模块": "开票",
+      "反馈人": "反馈人姓名",
+      "反馈人手机": "13800000000",
+      "反馈人电话": "0755-12345678",
+      "反馈人邮箱": "user@example.com",
+      "客户名称": "某某有限公司",
+      "客户编码": "C20260001",
+      "KSM服务级别": "标准服务",
+      "联系人": "联系人姓名",
+      "联系电话": "0755-12345678",
+      "联系人手机": "13800000000",
+      "联系邮箱": "contact@example.com",
+      "责任人": "李四",
+      "问题是否解决": "是",
+      "服务整体满意度": "满意",
+      "服务及时性": "及时",
+      "服务质量": "优",
+      "意见与建议": "无",
+      "是否退单": "否",
+      "工单处理过程": "处理时间：2026-01-01
+  09:05:00\n处理节点：受理\n节点状态：处理完成\n处理人：张三\n处理说明：已受理，分配处理人"
+    }
+  }
+
+
+
+5,智齿工单完整参数
+
+  {
+    "source": "zhichi",
+    "raw": {
+      "ticketid": "T20260101001",
+      "ticket_code": "ZC-2026-001",
+      "ticket_title": "工单标题",
+      "ticket_content": "问题描述内容",
+      "ticket_status": 1,
+      "ticket_level": 2,
+      "create_time": "2026-01-01 09:00:00",
+      "update_time": "2026-01-02 10:00:00",
+      "user_emails": "user@example.com",
+      "deal_agent_name": "处理坐席姓名",
+      "enterprise_name": "某某有限公司",
+      "file_str": "https://zhichi.example.com/file/xxx.png",
+      "extend_fields_list": [
+        {
+          "field_name": "产品分类",
+          "field_type": "6",
+          "field_text": "星空旗舰版-开票",
+          "field_value": "option_001"
+        },
+        {
+          "field_name": "联系人",
+          "field_type": "1",
+          "field_text": "",
+          "field_value": "张三"
+        },
+        {
+          "field_name": "联系手机",
+          "field_type": "1",
+          "field_text": "",
+          "field_value": "13800000000"
+        },
+        {
+          "field_name": "对接ERP",
+          "field_type": "1",
+          "field_text": "",
+          "field_value": "金蝶云星空"
+        },
+        {
+          "field_name": "公司/项目名称",
+          "field_type": "1",
+          "field_text": "",
+          "field_value": "某某有限公司"
+        }
+      ]
+    },
+    "fields": {
+      "工单来源": "智齿",
+      "产品线": "金蝶发票云",
+      "工单来源ID": "T20260101001",
+      "工单来源编号": "ZC-2026-001",
+      "主题": "工单标题",
+      "问题描述": "问题描述内容",
+      "数据源工单状态": "受理中",
+      "紧急程度": "高",
+      "工单创建时间": 1735689600000,
+      "最新更新时间": 1735776000000,
+      "反馈人邮箱": "user@example.com",
+      "受理人": "处理坐席姓名",
+      "客户名称": "某某有限公司",
+      "主产品名称": "星空旗舰版-开票",
+      "产品模块": "星空旗舰版-开票",
+      "产品分类AI": "星空旗舰版-开票",
+      "联系人": "张三",
+      "反馈人": "张三",
+      "联系人手机": "13800000000",
+      "反馈人手机": "13800000000",
+      "对接ERP": "金蝶云星空"
+    }
+  }
+
+  ---
+  几个注意点：
+
+  - fields 中日期字段（工单创建时间、最新更新时间、响应时间）均为 Unix 毫秒时间戳
+  - raw.handleSteps 是数组，可能有多条，按 handleDateTime 升序排列
+  - raw.extend_fields_list 是智齿自定义扩展字段，field_type=6 的下拉字段取 field_text，其他取 field_value
+  - raw.attachment / raw.file_str 是原始附件 URL，飞书侧已单独处理上传，第三方系统可直接用这里的 URL 拉取
