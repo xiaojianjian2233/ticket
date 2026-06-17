@@ -97,7 +97,7 @@
 ### S7. answer-router（步骤3.3 分支路由）— ✏️**真 Skill** Claude→DeepSeek（SKILL.md）
 | 项 | 内容 |
 |---|---|
-| 逻辑 | **① 先看 `transfer_result`：`TRANSFER` → 直接 C**；② `NO_ACTION` → LLM **语义判定** agent 全文归类：bug→A / 需求→B / 【需要您提供】为核心问题无法定位→C / 正常回答→D；无法识别→C |
+| 逻辑 | **① 先看 `transfer_result`：`TRANSFER` → 直接 C**；② `NO_ACTION` → LLM **语义判定**（✏️输入=**问题原文+agent答复一起判**）：A=根因/源码/日志/面向研发改代码 / B=问题原文是新增功能需求(勿因agent要traceId误判C) / C=故障但缺信息无法定位或无答案转人工 / D=给确定答复(操作步骤或事实查询结论)；无法识别→C |
 | 取数 | `final_reply` = 【问题原因】→【问题根因】+【解决建议】→【解决方案】；`full_reply` = 全文(含【需要您提供】) |
 | 输出 | answer_branch / final_reply / full_reply / supply_note |
 | 异常 | LLM 失败 → 兜底 C |
@@ -111,12 +111,22 @@
 | harness | 重复 → `info.rd_hub_id` 关联已有 hub；新建 → 建 hub(full_reply) → S9。**A 分支不回写客户，status=pending_rd（SLA 不豁免）** |
 | 异常 | 硅基流动/LLM 挂 → 降级"非重复"(新建)，避免漏单 |
 
-### S9. linear-sync（分支A 新 bug）— Linear GraphQL（本期真启用）
+### S9. linear-sync（分支A bug 转研发 = 转 Linear）— Linear GraphQL（本期真启用）
 | 项 | 内容 |
 |---|---|
-| 逻辑 | `issueCreate`(team=CNPRD)，描述=【问题】+【答复 full_reply】 |
+| 出站建单 | 新建 hub 时**立即** `issueCreate`(team=CNPRD)，描述=【问题】+【答复 full_reply】；hub 默认 `in_progress`，SLA-2(hub创建起)启动 |
 | 输出 | linear_issue_id / linear_url → 落 hub，`linear_sync_status=synced` |
 | **异常分支** | 失败 → hub 保留，`linear_sync_status=failed` + 入 `t_task_queue` 重试(≤3)；超限 → 飞书通知人工 |
+
+### S9.5 linear-callback（Linear 回调分派，`POST /webhook/linear`）— py（非 SKILL）
+| 项 | 内容 |
+|---|---|
+| 触发 | Linear 回写三字段：status / 处理人(rd_handler) / 说明(rd_status_note) |
+| **按 status 分派** | ① `计划`+说明含发版日期(LLM提取) → **自动答复关单**所有关联 info（话术"您好，您提的问题会在大约{日期}可以修复，公有云环境自动发版、私有化客户需要申请私包发版，如有问题可以咨询发票云在线客服。"，固定模板不脱敏）+ 填 rd_resolved_at 停 SLA-2；② `计划`+无日期 → 转回 Linear(同一更新接口)附"未有具体发版日期"；③ `产研退回`+说明非空 → 飞书通知转人工；④ `产研退回`+空 → 转回 Linear 附"未有退回原因"；⑤ 其它 status → hub 原样显示 |
+| 状态镜像 | hub 的 rd_status/rd_handler/rd_status_note 镜像同步**所有关联 t_ticket_info** |
+| 出站更新 | 退回/转回用同一接口：issueUpdate(转 assignee)+commentCreate(附原因) |
+| ✏️A 分支终态 | 改为**回调驱动自动分派**，不再默认人工关单 |
+| 异常 | 验签失败 401；hub 不存在记日志；日期提取失败按无日期走转回；镜像同步失败重试(最终一致) |
 
 ### S10. faq-record（分支D 收录·归纳）— Claude→DeepSeek（SKILL.md）
 | 项 | 内容 |

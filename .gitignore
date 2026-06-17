@@ -4,3 +4,13 @@
 __pycache__/
 *.pyc
 .venv/
+
+# 测试虚拟环境 / 前端构建产物 / 依赖
+.venv-test/
+node_modules/
+dist/
+
+# 含真实生产密钥，禁止提交
+env.txt
+memory/
+deploy/docker-compose.yml

@@ -1,0 +1,16 @@
+# ticket-hub backend (Python 3.9+ / FastAPI / SQLAlchemy async / PG+pgvector / MinIO)
+# 注：代码用 Optional[...] 注解兼容 Py3.9（SQLAlchemy Mapped 在 3.9 不支持 X | None 写法）
+fastapi>=0.115
+uvicorn[standard]>=0.32
+sqlalchemy>=2.0.36
+greenlet>=3.0
+asyncpg>=0.30
+# pgvector 移除：目标共享 PG(官方 postgres:15-alpine)无法装 pgvector，embedding 用 jsonb + 应用层余弦
+pydantic>=2.10
+pydantic-settings>=2.6
+httpx>=0.28
+python-jose[cryptography]>=3.3
+python-multipart>=0.0.18
+minio>=7.2
+openpyxl>=3.1
+APScheduler>=3.10

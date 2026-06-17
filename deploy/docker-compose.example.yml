@@ -1,0 +1,74 @@
+# ticket-hub 部署（前后端分开）：backend/worker/scheduler 共用后端镜像 + frontend(nginx,:18025) + minio
+# 共享 PG 复用宿主已有 docker-db_postgres-1（经 .env 的 DATABASE_URL=106.55.57.40:5432/ticket_hub 访问）
+name: ticket-hub
+
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.backend
+    image: ticket-hub-backend:local
+    env_file: ../.env
+    environment:
+      APP_ENV: prod
+      DATABASE_URL: postgresql+asyncpg://postgres:${DB_PASSWORD}@docker-db_postgres-1:5432/ticket_hub
+      MINIO_ENDPOINT: minio:9000
+      MINIO_PUBLIC_BASE: http://dl.piaozone.com:18025/minio
+    # 用 Dockerfile 的 exec-form CMD（compose 字符串 command 会导致 uvicorn 启动后异常退出）
+    networks: [default, dbnet]
+    expose: ["8000"]
+    restart: unless-stopped
+
+  worker:
+    image: ticket-hub-backend:local
+    env_file: ../.env
+    environment:
+      APP_ENV: prod
+      DATABASE_URL: postgresql+asyncpg://postgres:${DB_PASSWORD}@docker-db_postgres-1:5432/ticket_hub
+      MINIO_ENDPOINT: minio:9000
+      MINIO_PUBLIC_BASE: http://dl.piaozone.com:18025/minio
+    networks: [default, dbnet]
+    command: ["python","-m","app.worker"]
+    depends_on: [backend]
+    restart: unless-stopped
+
+  scheduler:
+    image: ticket-hub-backend:local
+    env_file: ../.env
+    environment:
+      APP_ENV: prod
+      DATABASE_URL: postgresql+asyncpg://postgres:${DB_PASSWORD}@docker-db_postgres-1:5432/ticket_hub
+      MINIO_ENDPOINT: minio:9000
+    networks: [default, dbnet]
+    command: ["python","-m","app.scheduler"]
+    depends_on: [backend]
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - tickethub_minio:/data
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    image: ticket-hub-frontend:local
+    ports:
+      - "18031:80"   # 宿主 nginx(:18025) 反代 /fpy /api /webhook /minio → 此端口
+    depends_on: [backend]
+    restart: unless-stopped
+
+networks:
+  default: {}
+  dbnet:
+    external: true
+    name: docker_default
+
+volumes:
+  tickethub_minio: {}

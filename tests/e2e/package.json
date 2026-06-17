@@ -1,0 +1,6 @@
+{
+  "name": "ticket-hub-e2e",
+  "private": true,
+  "scripts": { "test": "playwright test", "report": "playwright show-report" },
+  "devDependencies": { "@playwright/test": "^1.45.0" }
+}

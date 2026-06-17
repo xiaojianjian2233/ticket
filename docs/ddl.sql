@@ -5,7 +5,14 @@
 -- 说明: 枚举用 varchar+注释(线上可加值); 时间 timestamptz; 主键 BIGSERIAL
 -- ============================================================
 
-CREATE EXTENSION IF NOT EXISTS vector;  -- pgvector (FAQ/hub 向量检索)
+-- ⚠️ 目标共享 PG(106.55.57.40, 官方 postgres:15-alpine 容器)无法装 pgvector：
+--    apk 的 postgresql-pgvector 是 PG18 编译版, 与容器 PG15 的 .so ABI 不兼容; 共享容器不可换镜像。
+--    故 embedding 用 jsonb 存 float 数组, 余弦相似度在应用层计算(候选量小: dedup top8/hub top5/同产品线FAQ, 足够)。
+
+-- 单号序列(防并发重号): ticket_no=FPY+yyyyMMdd+nextval, hub_no=HUB+..., faq_no=FAQ+...
+CREATE SEQUENCE IF NOT EXISTS seq_ticket_no;
+CREATE SEQUENCE IF NOT EXISTS seq_hub_no;
+CREATE SEQUENCE IF NOT EXISTS seq_faq_no;
 
 -- ============================================================
 -- 表1: t_ticket_info 工单主表
@@ -161,7 +168,7 @@ CREATE TABLE t_ticket_hub (
     product_tag        varchar(64),
     func_module        varchar(128),
     dev_owner          varchar(64),
-    embedding          vector(1024),                          -- hub-dedup 召回
+    embedding          jsonb,                                 -- hub-dedup 召回(float数组, 应用层算余弦)
     linear_issue_id    varchar(64),
     linear_url         varchar(512),
     linear_sync_status varchar(16)  NOT NULL DEFAULT 'pending',
@@ -184,7 +191,6 @@ CREATE UNIQUE INDEX uk_hub_no          ON t_ticket_hub (hub_no);
 CREATE INDEX idx_th_dev_owner_sla      ON t_ticket_hub (dev_owner, rd_sla_state, rd_sla_due_at);
 CREATE INDEX idx_th_product            ON t_ticket_hub (product_tag);
 CREATE INDEX idx_th_linear_status      ON t_ticket_hub (linear_sync_status);
-CREATE INDEX ivf_th_embedding          ON t_ticket_hub USING ivfflat (embedding vector_cosine_ops);
 
 -- ============================================================
 -- 表6: t_faq FAQ检索主库
@@ -196,7 +202,7 @@ CREATE TABLE t_faq (
     content         varchar(512) NOT NULL,                    -- 应用层限≤300
     product_tag     varchar(64)  NOT NULL,
     source_ticket_id bigint,
-    embedding       vector(1024),                             -- bge-m3
+    embedding       jsonb,                                    -- bge-m3 向量(float数组, 应用层算余弦)
     review_status   varchar(16)  NOT NULL DEFAULT 'pending_review',
     review_reason   text,
     reviewed_at     timestamptz,
@@ -209,7 +215,6 @@ CREATE TABLE t_faq (
 );
 CREATE UNIQUE INDEX uk_faq_no        ON t_faq (faq_no);
 CREATE INDEX idx_faq_product_review  ON t_faq (product_tag, review_status);
-CREATE INDEX ivf_faq_embedding       ON t_faq USING ivfflat (embedding vector_cosine_ops);
 CREATE INDEX idx_faq_source_ticket   ON t_faq (source_ticket_id);
 
 -- ============================================================
@@ -315,10 +320,11 @@ CREATE INDEX idx_users_role             ON t_users (role, is_active);
 -- ============================================================
 CREATE TABLE t_module_owner (
     id            BIGSERIAL PRIMARY KEY,
-    product_tag   varchar(64)  NOT NULL,
-    func_module   varchar(128) NOT NULL,
+    product_tag   varchar(64)  NOT NULL,                      -- 13权威产品线值之一
+    func_module   varchar(128) NOT NULL,                      -- 157模块/或业务域名(兜底行)
+    row_type      varchar(16)  NOT NULL DEFAULT 'module',     -- module/domain_fallback
     trigger_words text,                                       -- '|' 分隔
-    dev_owner     varchar(64),
+    dev_owner     varchar(64),                                -- 11人候选集
     dev_owner_uid varchar(64),
     is_active     boolean      NOT NULL DEFAULT true,
     sort_order    int          NOT NULL DEFAULT 0,
@@ -328,9 +334,10 @@ CREATE TABLE t_module_owner (
     created_by    varchar(64),
     updated_by    varchar(64)
 );
-CREATE UNIQUE INDEX uk_mo_product_module ON t_module_owner (product_tag, func_module);
+CREATE UNIQUE INDEX uk_mo_product_module ON t_module_owner (product_tag, func_module, row_type);
 CREATE INDEX idx_mo_module               ON t_module_owner (func_module);
 CREATE INDEX idx_mo_active               ON t_module_owner (is_active);
+CREATE INDEX idx_mo_rowtype              ON t_module_owner (row_type);
 
 -- ============================================================
 -- 表12: t_operation_log 配置审计(长期)
@@ -437,3 +444,205 @@ CREATE TABLE t_ticket_org (
 );
 CREATE UNIQUE INDEX uk_org_ticket_id ON t_ticket_org (ticket_id);
 CREATE INDEX idx_org_bill_id         ON t_ticket_org (source, org_bill_id);
+
+-- ============================================================
+-- 表15: t_task_queue 异步任务队列(PG表队列, SKIP LOCKED 抢锁)
+-- ============================================================
+CREATE TABLE t_task_queue (
+    id           BIGSERIAL PRIMARY KEY,
+    task_type    varchar(24)  NOT NULL,                    -- ksm_intake/sync_ticket/run_pipeline/writeback/sla_scan/observe_scan/queue_monitor
+    payload      jsonb        NOT NULL,                    -- 任务参数({info_id}/{notice_num}/{raw}...)
+    status       varchar(16)  NOT NULL DEFAULT 'pending',  -- pending/processing/done/failed/abandoned/suspended
+    priority     int          NOT NULL DEFAULT 0,          -- 数值大优先
+    retry_count  int          NOT NULL DEFAULT 0,          -- >max_retry → abandoned(自动转人工)
+    max_retry    int          NOT NULL DEFAULT 3,
+    available_at timestamptz  NOT NULL DEFAULT now(),      -- 退避重试的下次可取时间
+    locked_at    timestamptz,                              -- SKIP LOCKED 抢锁时间
+    locked_by    varchar(64),                              -- 抢到锁的 worker 标识
+    dedup_key    varchar(128),                             -- 可选幂等键(防重复入队)
+    last_error   varchar(1024),
+    is_deleted   boolean      NOT NULL DEFAULT false,
+    created_at   timestamptz  NOT NULL DEFAULT now(),
+    updated_at   timestamptz  NOT NULL DEFAULT now(),
+    created_by   varchar(64),
+    updated_by   varchar(64)
+);
+CREATE INDEX idx_tq_poll        ON t_task_queue (status, priority DESC, available_at) WHERE is_deleted = false;
+CREATE INDEX idx_tq_type_status ON t_task_queue (task_type, status);
+CREATE INDEX idx_tq_abandoned   ON t_task_queue (status) WHERE status = 'abandoned';
+-- dedup 仅约束"活跃中"任务(pending/processing): 防并发重复入队, 但不阻止任务完成后同键再次入队
+CREATE UNIQUE INDEX uk_tq_dedup ON t_task_queue (dedup_key)
+    WHERE dedup_key IS NOT NULL AND status IN ('pending', 'processing') AND is_deleted = false;
+
+-- ============================================================
+-- 表16: t_skill_log 流水线每步审计(harness 统一写, 高写入)
+-- ============================================================
+CREATE TABLE t_skill_log (
+    id          BIGSERIAL PRIMARY KEY,
+    trace_id    varchar(64),                               -- 贯穿一次流水线
+    ticket_id   bigint,
+    hub_id      bigint,                                    -- hub 相关步骤(hub-dedup/linear)
+    skill_name  varchar(64)  NOT NULL,                     -- S1~S13 步骤名(routable/tagging/...)
+    step_no     varchar(16),                               -- 可选 S1/S2...
+    status      varchar(16)  NOT NULL DEFAULT 'ok',        -- ok/failed/skipped
+    result_json jsonb,                                     -- 信封 fields
+    evidence    text,                                      -- LLM 判定依据
+    model_used  varchar(32),                               -- claude/deepseek/-
+    duration_ms int,
+    error_msg   varchar(1024),
+    is_deleted  boolean      NOT NULL DEFAULT false,
+    created_at  timestamptz  NOT NULL DEFAULT now(),
+    updated_at  timestamptz  NOT NULL DEFAULT now(),
+    created_by  varchar(64),
+    updated_by  varchar(64)
+);
+CREATE INDEX idx_sl_ticket ON t_skill_log (ticket_id, created_at);
+CREATE INDEX idx_sl_hub    ON t_skill_log (hub_id);
+CREATE INDEX idx_sl_skill  ON t_skill_log (skill_name, created_at);
+CREATE INDEX idx_sl_trace  ON t_skill_log (trace_id);
+CREATE INDEX idx_sl_fail   ON t_skill_log (status, created_at) WHERE status = 'failed';
+
+-- ============================================================
+-- 表17: t_skill_md 可编辑 SKILL.md(DB 为权威源, runtime 热加载)
+-- ============================================================
+CREATE TABLE t_skill_md (
+    id          BIGSERIAL PRIMARY KEY,
+    skill_name  varchar(64)  NOT NULL,                     -- 9个LLM SKILL: ticket-routable/...
+    skill_type  varchar(8)   NOT NULL DEFAULT 'llm',       -- llm(可编辑)/code(只读展示)
+    editable    boolean      NOT NULL DEFAULT true,
+    frontmatter jsonb,                                     -- {name, description, model, editable}
+    content_md  text         NOT NULL,                     -- SKILL.md 正文
+    version     int          NOT NULL DEFAULT 1,           -- 保存自增, 缓存失效依据
+    is_deleted  boolean      NOT NULL DEFAULT false,
+    created_at  timestamptz  NOT NULL DEFAULT now(),
+    updated_at  timestamptz  NOT NULL DEFAULT now(),
+    created_by  varchar(64),
+    updated_by  varchar(64)
+);
+CREATE UNIQUE INDEX uk_skill_md_name ON t_skill_md (skill_name);
+CREATE INDEX idx_skill_md_type       ON t_skill_md (skill_type, editable);
+
+-- ============================================================
+-- 表18: t_skill_md_history SKILL.md 版本历史(回滚)
+-- ============================================================
+CREATE TABLE t_skill_md_history (
+    id          BIGSERIAL PRIMARY KEY,
+    skill_name  varchar(64)  NOT NULL,
+    version     int          NOT NULL,
+    frontmatter jsonb,
+    content_md  text         NOT NULL,
+    change_note varchar(512),
+    is_deleted  boolean      NOT NULL DEFAULT false,
+    created_at  timestamptz  NOT NULL DEFAULT now(),
+    updated_at  timestamptz  NOT NULL DEFAULT now(),
+    created_by  varchar(64),
+    updated_by  varchar(64)
+);
+CREATE UNIQUE INDEX uk_skill_hist_name_ver ON t_skill_md_history (skill_name, version);
+CREATE INDEX idx_skill_hist_name           ON t_skill_md_history (skill_name, created_at);
+
+-- ============================================================
+-- 表19: t_attachment 附件/图片统一存 MinIO(scope: ticket/faq/hub)
+-- ============================================================
+CREATE TABLE t_attachment (
+    id              BIGSERIAL PRIMARY KEY,
+    scope           varchar(8)   NOT NULL,                 -- ticket/faq/hub
+    ref_id          bigint       NOT NULL,                 -- 对应 info/faq/hub 主键
+    source_url      varchar(1024),                         -- 原始下载源
+    minio_bucket    varchar(64),
+    minio_key       varchar(512),
+    public_url      varchar(1024),                         -- 对外访问URL(https://fpy-jfsv.kingdee.com:8864/...)
+    file_name       varchar(255),
+    mime            varchar(128),
+    size_bytes      bigint,
+    is_image        boolean      NOT NULL DEFAULT false,
+    download_status varchar(16)  NOT NULL DEFAULT 'pending', -- pending/stored/failed
+    error           varchar(512),
+    is_deleted      boolean      NOT NULL DEFAULT false,
+    created_at      timestamptz  NOT NULL DEFAULT now(),
+    updated_at      timestamptz  NOT NULL DEFAULT now(),
+    created_by      varchar(64),
+    updated_by      varchar(64)
+);
+CREATE INDEX idx_att_scope_ref ON t_attachment (scope, ref_id);
+CREATE INDEX idx_att_download   ON t_attachment (download_status) WHERE download_status <> 'stored';
+
+-- ============================================================
+-- 表20: t_holiday 节假日(工作日计时, 双SLA; 国务院API同步+手动兜底)
+-- ============================================================
+CREATE TABLE t_holiday (
+    id           BIGSERIAL PRIMARY KEY,
+    holiday_date date         NOT NULL,
+    day_type     varchar(12)  NOT NULL,                    -- holiday(法定休)/workday(调休补班,周末上班)
+    name         varchar(64),                              -- 节假日名(国庆/春节...)
+    year         int          NOT NULL,
+    source       varchar(16)  NOT NULL DEFAULT 'gov_api',  -- gov_api/manual
+    is_deleted   boolean      NOT NULL DEFAULT false,
+    created_at   timestamptz  NOT NULL DEFAULT now(),
+    updated_at   timestamptz  NOT NULL DEFAULT now(),
+    created_by   varchar(64),
+    updated_by   varchar(64)
+);
+CREATE UNIQUE INDEX uk_holiday_date ON t_holiday (holiday_date);
+CREATE INDEX idx_holiday_year       ON t_holiday (year, day_type);
+
+-- ============================================================
+-- 表21: t_dispatch_assignee 派单配额名单(主+溢出同表, 第10条)
+-- ============================================================
+CREATE TABLE t_dispatch_assignee (
+    id            BIGSERIAL PRIMARY KEY,
+    assignee_name varchar(64)  NOT NULL,
+    feishu_uid    varchar(64),                             -- 群内@用
+    alloc_value   int          NOT NULL DEFAULT 1,         -- 配额权重(按比例派单)
+    tier          varchar(12)  NOT NULL DEFAULT 'main',    -- main(主名单)/overflow(溢出组)
+    is_active     boolean      NOT NULL DEFAULT true,
+    sort_order    int          NOT NULL DEFAULT 0,
+    is_deleted    boolean      NOT NULL DEFAULT false,
+    created_at    timestamptz  NOT NULL DEFAULT now(),
+    updated_at    timestamptz  NOT NULL DEFAULT now(),
+    created_by    varchar(64),
+    updated_by    varchar(64)
+);
+CREATE INDEX idx_da_tier_active ON t_dispatch_assignee (tier, is_active);
+CREATE INDEX idx_da_uid         ON t_dispatch_assignee (feishu_uid);
+
+-- ============================================================
+-- 表22: t_dispatch_config 派单兜底配置(key-value; default_assignee 单点兜底)
+-- ============================================================
+CREATE TABLE t_dispatch_config (
+    id           BIGSERIAL PRIMARY KEY,
+    config_key   varchar(64)  NOT NULL,                    -- default_assignee/default_assignee_uid
+    config_value varchar(255),
+    remark       varchar(255),
+    is_deleted   boolean      NOT NULL DEFAULT false,
+    created_at   timestamptz  NOT NULL DEFAULT now(),
+    updated_at   timestamptz  NOT NULL DEFAULT now(),
+    created_by   varchar(64),
+    updated_by   varchar(64)
+);
+CREATE UNIQUE INDEX uk_dc_key ON t_dispatch_config (config_key);
+
+-- ============================================================
+-- 表23: t_dispatch_log 派单留痕(配额已分配数统计依据)
+-- ============================================================
+CREATE TABLE t_dispatch_log (
+    id            BIGSERIAL PRIMARY KEY,
+    ticket_id     bigint       NOT NULL,
+    branch        varchar(16),                             -- B/C/returned/not_takeover
+    tier_hit      varchar(12)  NOT NULL,                   -- main/overflow/default/broadcast
+    assignee_name varchar(64),
+    assignee_uid  varchar(64),
+    is_deleted    boolean      NOT NULL DEFAULT false,
+    created_at    timestamptz  NOT NULL DEFAULT now(),
+    updated_at    timestamptz  NOT NULL DEFAULT now(),
+    created_by    varchar(64),
+    updated_by    varchar(64)
+);
+CREATE INDEX idx_dl_ticket        ON t_dispatch_log (ticket_id);
+CREATE INDEX idx_dl_assignee_date ON t_dispatch_log (assignee_name, created_at);  -- 配额统计:某人已分配数
+
+-- ============================================================
+-- 说明: RBAC 简化为 t_users.role 三级字符串(admin/handler/visitor),
+--       配合 app/core/security.py 的 ROLE_RANK; 不再建 t_roles/t_role_permission。
+--       审核人/SLA接收人/派单名单走独立配置表或名单, 非 role 圈定。
+-- ============================================================

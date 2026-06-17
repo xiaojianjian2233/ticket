@@ -1,0 +1,15 @@
+# 后端镜像（API / worker / scheduler 共用，命令区分角色）
+# 用 bullseye(Debian11, glibc2.31 走 clone)：bookworm 的 glibc2.36 用 clone3，被宿主过时 seccomp 拦截→"can't start new thread"
+FROM python:3.11-slim-bullseye
+WORKDIR /app
+ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_INPUT=1 PIP_PROGRESS_BAR=off PIP_DISABLE_PIP_VERSION_CHECK=1
+COPY requirements.txt .
+RUN pip install --no-cache-dir --progress-bar off -r requirements.txt
+COPY app ./app
+COPY skills_md ./skills_md
+COPY scripts ./scripts
+COPY docs/ddl.sql ./docs/ddl.sql
+EXPOSE 8000
+# --loop asyncio --http h11：绕开 uvloop/httptools C 扩展（该环境下 uvloop 段错误 SIGSEGV）
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--loop", "asyncio", "--http", "h11"]
