@@ -14,3 +14,7 @@ dist/
 env.txt
 memory/
 deploy/docker-compose.yml
+
+# 本地虚拟环境 / 数据文件(含客户PII，禁止提交)
+.venv-import/
+*.xlsx

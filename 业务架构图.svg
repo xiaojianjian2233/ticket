@@ -1,0 +1,165 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 1200" font-family="PingFang SC, Microsoft YaHei, Helvetica, sans-serif">
+  <defs>
+    <filter id="sh" x="-4%" y="-4%" width="108%" height="112%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#000" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arw" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#5f6368"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1300" height="1200" fill="#fafbfc"/>
+
+  <!-- Title -->
+  <text x="650" y="40" text-anchor="middle" font-size="24" font-weight="700" fill="#202124">发票云工单自动处理中台 · 业务架构图</text>
+  <text x="650" y="63" text-anchor="middle" font-size="13" fill="#80868b">ticket-hub　来源接入 → 入站归一 → AI 流水线 → 分支回写 → 业务管理 → 协同支撑</text>
+
+  <!-- main flow arrows -->
+  <line x1="650" y1="176" x2="650" y2="189" stroke="#5f6368" stroke-width="2" marker-end="url(#arw)"/>
+  <line x1="650" y1="286" x2="650" y2="299" stroke="#5f6368" stroke-width="2" marker-end="url(#arw)"/>
+  <line x1="650" y1="561" x2="650" y2="574" stroke="#5f6368" stroke-width="2" marker-end="url(#arw)"/>
+  <line x1="650" y1="691" x2="650" y2="704" stroke="#5f6368" stroke-width="2" marker-end="url(#arw)"/>
+
+  <!-- ===================== Band 1: 工单来源 ===================== -->
+  <rect x="30" y="80" width="1240" height="96" rx="10" fill="#eaf2ff"/>
+  <rect x="30" y="80" width="140" height="96" rx="10" fill="#1a73e8"/>
+  <text x="100" y="123" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">工单</text>
+  <text x="100" y="145" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">来源层</text>
+  <g font-size="13" fill="#202124" text-anchor="middle">
+    <rect x="190" y="100" width="250" height="56" rx="8" fill="#fff" stroke="#1a73e8" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="315" y="124" font-weight="600">KSM 工单</text><text x="315" y="143" font-size="11" fill="#5f6368">发票云生产 · 全量流水线</text>
+    <rect x="460" y="100" width="250" height="56" rx="8" fill="#fff" stroke="#1a73e8" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="585" y="124" font-weight="600">智齿在线客服</text><text x="585" y="143" font-size="11" fill="#5f6368">简化流水线</text>
+    <rect x="730" y="100" width="250" height="56" rx="8" fill="#fff" stroke="#1a73e8" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="855" y="124" font-weight="600">内部提单</text><text x="855" y="143" font-size="11" fill="#5f6368">工单助手</text>
+    <rect x="1000" y="100" width="250" height="56" rx="8" fill="#fff" stroke="#1a73e8" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="1125" y="124" font-weight="600">外部提单</text><text x="1125" y="143" font-size="11" fill="#5f6368">扩展来源</text>
+  </g>
+
+  <!-- ===================== Band 2: 接入与入站 ===================== -->
+  <rect x="30" y="190" width="1240" height="96" rx="10" fill="#e7f5ec"/>
+  <rect x="30" y="190" width="140" height="96" rx="10" fill="#188038"/>
+  <text x="100" y="233" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">接入</text>
+  <text x="100" y="255" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">入站层</text>
+  <g font-size="13" fill="#202124" text-anchor="middle">
+    <rect x="190" y="210" width="250" height="56" rx="8" fill="#fff" stroke="#188038" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="315" y="234" font-weight="600">Webhook 鉴权</text><text x="315" y="253" font-size="11" fill="#5f6368">/webhook/ksm·zhichi</text>
+    <rect x="460" y="210" width="250" height="56" rx="8" fill="#fff" stroke="#188038" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="585" y="234" font-weight="600">任务队列</text><text x="585" y="253" font-size="11" fill="#5f6368">PG 表 · SKIP LOCKED</text>
+    <rect x="730" y="210" width="250" height="56" rx="8" fill="#fff" stroke="#188038" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="855" y="234" font-weight="600">Worker 消费</text><text x="855" y="253" font-size="11" fill="#5f6368">拉全量 · 幂等去重</text>
+    <rect x="1000" y="210" width="250" height="56" rx="8" fill="#fff" stroke="#188038" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="1125" y="234" font-weight="600">三层归一入库</text><text x="1125" y="253" font-size="11" fill="#5f6368">info / detail / org</text>
+  </g>
+
+  <!-- ===================== Band 3: AI 流水线 ===================== -->
+  <rect x="30" y="300" width="1240" height="261" rx="10" fill="#fff7e6"/>
+  <rect x="30" y="300" width="140" height="261" rx="10" fill="#c77700"/>
+  <text x="100" y="418" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">AI 智能</text>
+  <text x="100" y="440" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">流水线</text>
+
+  <text x="188" y="328" font-size="12" font-weight="700" fill="#8a5a00">KSM 全量流水线</text>
+  <g font-size="12" fill="#202124" text-anchor="middle">
+    <rect x="188" y="335" width="170" height="54" rx="8" fill="#fff" stroke="#c77700" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="273" y="357" font-weight="600">S1 流转判断</text><text x="273" y="375" font-size="10.5" fill="#5f6368">是否接管</text>
+    <rect x="370" y="335" width="170" height="54" rx="8" fill="#fff" stroke="#c77700" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="455" y="357" font-weight="600">接管·刷新节点</text><text x="455" y="375" font-size="10.5" fill="#5f6368">lockKsmOrder</text>
+    <rect x="552" y="335" width="170" height="54" rx="8" fill="#fff7ee" stroke="#c77700" stroke-width="2" filter="url(#sh)"/>
+    <text x="637" y="357" font-weight="700">S2 智能打标</text><text x="637" y="375" font-size="10.5" fill="#5f6368">产品线·模块·责任人</text>
+    <rect x="734" y="335" width="170" height="54" rx="8" fill="#fff" stroke="#c77700" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="819" y="357" font-weight="600">S3 信息去重</text><text x="819" y="375" font-size="10.5" fill="#5f6368">命中复用答复</text>
+    <rect x="916" y="335" width="170" height="54" rx="8" fill="#fff" stroke="#c77700" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="1001" y="357" font-weight="600">S6 Agent 答复</text><text x="1001" y="375" font-size="10.5" fill="#5f6368">脱敏 · 生成</text>
+    <rect x="1098" y="335" width="170" height="54" rx="8" fill="#fff" stroke="#c77700" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="1183" y="357" font-weight="600">S7 答复路由</text><text x="1183" y="375" font-size="10.5" fill="#5f6368">判 A / B / C / D</text>
+  </g>
+
+  <!-- S2 detail callout -->
+  <rect x="552" y="396" width="716" height="34" rx="8" fill="#fffbf2" stroke="#e6c180" stroke-width="1.2"/>
+  <text x="566" y="417" font-size="11.5" fill="#7a5200">S2 打标明细：产品线（AI 判定）· 问题模块（语义判定，受产品线约束，源自模块责任人表）· 责任田负责人（产品线+模块 查表带出）</text>
+
+  <text x="188" y="455" font-size="12" font-weight="700" fill="#8a5a00">智齿简化流水线</text>
+  <g font-size="12" fill="#202124" text-anchor="middle">
+    <rect x="188" y="462" width="353" height="50" rx="8" fill="#fff" stroke="#c77700" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="364" y="492" font-weight="600">智能打标（产品线 · 问题模块 · 责任田负责人）</text>
+    <rect x="553" y="462" width="200" height="50" rx="8" fill="#fff" stroke="#c77700" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="653" y="492" font-weight="600">信息去重</text>
+    <rect x="765" y="462" width="503" height="50" rx="8" fill="#fff" stroke="#c77700" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="1016" y="492" font-weight="600">命中 → 回写答复；未命中 → 转人工待办</text>
+  </g>
+  <text x="188" y="540" font-size="11.5" fill="#7a5200">AI 能力：Claude 主模型，空响应/异常 → DeepSeek 兜底；Skill（SKILL.md）DB 热加载，页面可改。</text>
+
+  <!-- ===================== Band 4: 分支处理与回写 ===================== -->
+  <rect x="30" y="575" width="1240" height="116" rx="10" fill="#fdecea"/>
+  <rect x="30" y="575" width="140" height="116" rx="10" fill="#d23f31"/>
+  <text x="100" y="623" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">分支</text>
+  <text x="100" y="645" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">回写层</text>
+  <g font-size="13" fill="#202124" text-anchor="middle">
+    <rect x="190" y="598" width="250" height="70" rx="8" fill="#fff" stroke="#d23f31" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="315" y="623" font-weight="700">A / B 转研发</text><text x="315" y="642" font-size="11" fill="#5f6368">建 hub + Linear issue</text><text x="315" y="658" font-size="11" fill="#5f6368">责任人固定李志坚 → 待研发</text>
+    <rect x="460" y="598" width="250" height="70" rx="8" fill="#fff" stroke="#d23f31" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="585" y="623" font-weight="700">C 资料缺失</text><text x="585" y="642" font-size="11" fill="#5f6368">supplyKsmOrder</text><text x="585" y="658" font-size="11" fill="#5f6368">退回客户补充</text>
+    <rect x="730" y="598" width="250" height="70" rx="8" fill="#fff" stroke="#d23f31" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="855" y="623" font-weight="700">D 答复关单</text><text x="855" y="642" font-size="11" fill="#5f6368">handleKsmOrder（is_deal）</text><text x="855" y="658" font-size="11" fill="#5f6368">结案处理完成</text>
+    <rect x="1000" y="598" width="250" height="70" rx="8" fill="#fff" stroke="#d23f31" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="1125" y="623" font-weight="700">不接管 / 退回</text><text x="1125" y="642" font-size="11" fill="#5f6368">returnKsmOrder</text><text x="1125" y="658" font-size="11" fill="#5f6368">回退客户 / 转人工兜底</text>
+  </g>
+
+  <!-- ===================== Band 5: 业务管理域 ===================== -->
+  <rect x="30" y="705" width="1240" height="116" rx="10" fill="#f5ebfb"/>
+  <rect x="30" y="705" width="140" height="116" rx="10" fill="#8e24aa"/>
+  <text x="100" y="753" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">业务</text>
+  <text x="100" y="775" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">管理域</text>
+  <g font-size="12.5" fill="#202124" text-anchor="middle">
+    <rect x="188" y="728" width="146" height="70" rx="8" fill="#fff" stroke="#8e24aa" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="261" y="758" font-weight="600">工单管理</text><text x="261" y="776" font-size="10.5" fill="#5f6368">列表/详情/待办</text>
+    <rect x="344" y="728" width="146" height="70" rx="8" fill="#fff" stroke="#8e24aa" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="417" y="758" font-weight="600">hub 研发管理</text><text x="417" y="776" font-size="10.5" fill="#5f6368">Linear 状态同步</text>
+    <rect x="500" y="728" width="146" height="70" rx="8" fill="#fff" stroke="#8e24aa" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="573" y="758" font-weight="600">派单规则</text><text x="573" y="776" font-size="10.5" fill="#5f6368">正式 / 溢出</text>
+    <rect x="656" y="728" width="146" height="70" rx="8" fill="#fff" stroke="#8e24aa" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="729" y="758" font-weight="600">模块责任人</text><text x="729" y="776" font-size="10.5" fill="#5f6368">打标权威源</text>
+    <rect x="812" y="728" width="146" height="70" rx="8" fill="#fff" stroke="#8e24aa" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="885" y="758" font-weight="600">知识库 FAQ</text><text x="885" y="776" font-size="10.5" fill="#5f6368">沉淀 / 查阅</text>
+    <rect x="968" y="728" width="146" height="70" rx="8" fill="#fff" stroke="#8e24aa" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="1041" y="758" font-weight="600">SLA 监控</text><text x="1041" y="776" font-size="10.5" fill="#5f6368">人工 / 研发双表</text>
+    <rect x="1124" y="728" width="146" height="70" rx="8" fill="#fff" stroke="#8e24aa" stroke-width="1.5" filter="url(#sh)"/>
+    <text x="1197" y="758" font-weight="600">概览看板</text><text x="1197" y="776" font-size="10.5" fill="#5f6368">全局 / 个人</text>
+  </g>
+
+  <!-- ===================== Band 6: 协同与支撑 ===================== -->
+  <rect x="30" y="835" width="1240" height="155" rx="10" fill="#eceef1"/>
+  <rect x="30" y="835" width="140" height="155" rx="10" fill="#455a64"/>
+  <text x="100" y="903" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">协同</text>
+  <text x="100" y="925" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">支撑层</text>
+  <g font-size="12.5" fill="#202124" text-anchor="middle">
+    <rect x="188" y="852" width="207" height="56" rx="8" fill="#fff" stroke="#455a64" stroke-width="1.3" filter="url(#sh)"/>
+    <text x="291" y="876" font-weight="600">KSM 回写</text><text x="291" y="894" font-size="10.5" fill="#5f6368">lock/handle/supply/return</text>
+    <rect x="407" y="852" width="207" height="56" rx="8" fill="#fff" stroke="#455a64" stroke-width="1.3" filter="url(#sh)"/>
+    <text x="510" y="876" font-weight="600">Linear 双向</text><text x="510" y="894" font-size="10.5" fill="#5f6368">建单 + webhook/轮询同步</text>
+    <rect x="626" y="852" width="207" height="56" rx="8" fill="#fff" stroke="#455a64" stroke-width="1.3" filter="url(#sh)"/>
+    <text x="729" y="876" font-weight="600">飞书 SSO · 通知</text><text x="729" y="894" font-size="10.5" fill="#5f6368">登录 / 群消息告警</text>
+    <rect x="845" y="852" width="207" height="56" rx="8" fill="#fff" stroke="#455a64" stroke-width="1.3" filter="url(#sh)"/>
+    <text x="948" y="876" font-weight="600">智齿回写</text><text x="948" y="894" font-size="10.5" fill="#5f6368">答复 / 转交</text>
+    <rect x="1064" y="852" width="206" height="56" rx="8" fill="#fff" stroke="#455a64" stroke-width="1.3" filter="url(#sh)"/>
+    <text x="1167" y="876" font-weight="600">知识库沉淀</text><text x="1167" y="894" font-size="10.5" fill="#5f6368">关单触发收录</text>
+
+    <rect x="188" y="916" width="207" height="56" rx="8" fill="#fff" stroke="#455a64" stroke-width="1.3" filter="url(#sh)"/>
+    <text x="291" y="940" font-weight="600">Claude → DeepSeek</text><text x="291" y="958" font-size="10.5" fill="#5f6368">主模型 + 兜底</text>
+    <rect x="407" y="916" width="207" height="56" rx="8" fill="#fff" stroke="#455a64" stroke-width="1.3" filter="url(#sh)"/>
+    <text x="510" y="940" font-weight="600">硅基流动 Embedding</text><text x="510" y="958" font-size="10.5" fill="#5f6368">bge-m3 去重召回</text>
+    <rect x="626" y="916" width="207" height="56" rx="8" fill="#fff" stroke="#455a64" stroke-width="1.3" filter="url(#sh)"/>
+    <text x="729" y="940" font-weight="600">Skill 热加载</text><text x="729" y="958" font-size="10.5" fill="#5f6368">SKILL.md · DB 权威</text>
+    <rect x="845" y="916" width="207" height="56" rx="8" fill="#fff" stroke="#455a64" stroke-width="1.3" filter="url(#sh)"/>
+    <text x="948" y="940" font-weight="600">用户权限 · 审计</text><text x="948" y="958" font-size="10.5" fill="#5f6368">RBAC / 操作日志</text>
+    <rect x="1064" y="916" width="206" height="56" rx="8" fill="#fff" stroke="#455a64" stroke-width="1.3" filter="url(#sh)"/>
+    <text x="1167" y="940" font-weight="600">调度任务</text><text x="1167" y="958" font-size="10.5" fill="#5f6368">SLA / Linear 轮询兜底</text>
+  </g>
+
+  <!-- Footer: production red lines -->
+  <rect x="30" y="1010" width="1240" height="60" rx="10" fill="#fff4f4" stroke="#d23f31" stroke-width="1.3"/>
+  <text x="50" y="1035" font-size="13" font-weight="700" fill="#c5221f">★ 生产红线</text>
+  <text x="50" y="1056" font-size="11.5" fill="#5f6368">对外回写真实生效（WRITEBACK_DRY_RUN=false）　·　Linear 责任人固定「李志坚」　·　KSM 处理人「李志坚 / 工号53935」　·　写失败转人工不阻断主流程　·　模块责任人表为打标权威源</text>
+
+  <text x="1270" y="1095" text-anchor="end" font-size="10.5" fill="#9aa0a6">后端 FastAPI + SQLAlchemy 异步 + PostgreSQL15　·　前端 Vue3 + Element Plus　·　docker-compose 前后端分离部署</text>
+</svg>

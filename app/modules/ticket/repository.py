@@ -169,18 +169,19 @@ async def dedup_candidates(session: AsyncSession, *, product_tag: str, exclude_i
     return list(rows)
 
 
-async def hub_candidates(session: AsyncSession, *, product_tag: str, days: int = 180, limit: int = 50) -> list[TicketHub]:
-    """hub-dedup 候选：同产品线、近 N 天、未关闭、有 embedding 的研发单（应用层算余弦召回 top5）。"""
+async def hub_candidates(session: AsyncSession, *, product_tag: str) -> list[TicketHub]:
+    """hub-dedup 候选：同产品线、有 embedding 的【全量】研发单（含已关闭，应用层算余弦）。
+
+    不再按时间窗/条数/状态截断——对该产品线历史 hub 全量比对，避免漏召回而重复建单。
+    （量级很大时再切换 pgvector ANN 索引检索以保持性能。）
+    """
     if not product_tag:
         return []
-    since = datetime.now(timezone.utc) - timedelta(days=days)
     rows = (await session.execute(
         select(TicketHub).where(
             TicketHub.product_tag == product_tag,
-            TicketHub.created_at >= since,
             TicketHub.embedding.is_not(None),
-            TicketHub.status != "closed",
             TicketHub.is_deleted.is_(False),
-        ).order_by(TicketHub.created_at.desc()).limit(limit)
+        ).order_by(TicketHub.created_at.desc())
     )).scalars()
     return list(rows)
